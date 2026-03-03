@@ -28,6 +28,7 @@ export function Dashboard() {
             name: data.name,
             phone: data.phone,
             targetCalories: data.target_cal,
+            targetWeight: data.target_weight,
             currentWeight: data.current_weight,
           });
         } else {
@@ -92,6 +93,10 @@ export function Dashboard() {
               <div>
                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">목표 칼로리</p>
                 <p className="text-lg font-bold text-slate-900">{selectedUser.targetCalories} kcal</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">목표 체중</p>
+                <p className="text-lg font-bold text-slate-900">{selectedUser.targetWeight || 0} kg</p>
               </div>
               <div>
                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">현재 체중</p>

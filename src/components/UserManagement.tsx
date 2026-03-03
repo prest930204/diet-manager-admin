@@ -17,7 +17,7 @@ export function UserManagement() {
   }, []);
 
   const [isAddingUser, setIsAddingUser] = useState(false);
-  const [newUser, setNewUser] = useState({ id: '', password: '', name: '', phone: '', targetCal: '' });
+  const [newUser, setNewUser] = useState({ id: '', password: '', name: '', phone: '', targetCal: '', targetWeight: '' });
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +25,7 @@ export function UserManagement() {
       const res = await fetch('/api/members', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...newUser, targetCal: Number(newUser.targetCal) })
+        body: JSON.stringify({ ...newUser, targetCal: Number(newUser.targetCal), targetWeight: Number(newUser.targetWeight) })
       });
       const data = await res.json();
       
@@ -35,9 +35,9 @@ export function UserManagement() {
       }
 
       if (res.ok) {
-        setUsers([...users, { ...newUser, target_cal: Number(newUser.targetCal) }]);
+        setUsers([...users, { ...newUser, target_cal: Number(newUser.targetCal), target_weight: Number(newUser.targetWeight) }]);
         setIsAddingUser(false);
-        setNewUser({ id: '', password: '', name: '', phone: '', targetCal: '' });
+        setNewUser({ id: '', password: '', name: '', phone: '', targetCal: '', targetWeight: '' });
       } else {
         alert(data.error || '추가 실패');
       }
@@ -119,7 +119,7 @@ export function UserManagement() {
                   className="bg-white"
                 />
               </div>
-              <div className="space-y-2 md:col-span-2">
+              <div className="space-y-2">
                 <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider ml-1">목표 칼로리 (kcal)</label>
                 <Input
                   required
@@ -127,6 +127,17 @@ export function UserManagement() {
                   placeholder="2000"
                   value={newUser.targetCal}
                   onChange={e => setNewUser({ ...newUser, targetCal: e.target.value })}
+                  className="bg-white"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider ml-1">목표 체중 (kg)</label>
+                <Input
+                  required
+                  type="number"
+                  placeholder="70"
+                  value={newUser.targetWeight}
+                  onChange={e => setNewUser({ ...newUser, targetWeight: e.target.value })}
                   className="bg-white"
                 />
               </div>
@@ -148,6 +159,7 @@ export function UserManagement() {
                 <th className="px-6 py-4 font-semibold tracking-wider">회원 정보</th>
                 <th className="px-6 py-4 font-semibold tracking-wider">연락처</th>
                 <th className="px-6 py-4 font-semibold tracking-wider">목표 칼로리</th>
+                <th className="px-6 py-4 font-semibold tracking-wider">목표 체중</th>
                 <th className="px-6 py-4 font-semibold tracking-wider text-right">관리</th>
               </tr>
             </thead>
@@ -168,7 +180,12 @@ export function UserManagement() {
                   <td className="px-6 py-4 text-slate-600 font-medium">{user.phone}</td>
                   <td className="px-6 py-4">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                      {user.targetCal} kcal
+                      {user.target_cal || user.targetCal} kcal
+                    </span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                      {user.target_weight || 0} kg
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
