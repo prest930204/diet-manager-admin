@@ -1,3 +1,7 @@
+요청하신 대로 scripts 부분에 해당 내용을 반영하고, 서버 운영에 필수적인 패키지들(express, pg, dotenv)을 dependencies로 옮겨서 바로 배포 가능한 상태로 수정했습니다.
+
+✅ 수정된 package.json
+JSON
 {
   "name": "react-example",
   "private": true,
@@ -6,7 +10,7 @@
   "scripts": {
     "dev": "tsx server.ts",
     "start": "node --loader tsx server.ts",
-    "build": "vite build",
+    "build": "vite build --outDir dist && echo 'Frontend Build Complete'",
     "preview": "vite preview",
     "clean": "rm -rf dist",
     "lint": "tsc --noEmit"
@@ -15,8 +19,11 @@
     "@google/genai": "^1.29.0",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "dotenv": "^17.2.3",
+    "express": "^4.21.2",
     "lucide-react": "^0.546.0",
     "motion": "^12.23.24",
+    "pg": "^8.19.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "tailwind-merge": "^3.5.0"
@@ -28,9 +35,6 @@
     "@types/node": "^22.14.0",
     "@types/pg": "^8.18.0",
     "better-sqlite3": "^12.4.1",
-    "dotenv": "^17.2.3",
-    "express": "^4.21.2",
-    "pg": "^8.19.0",
     "autoprefixer": "^10.4.21",
     "tailwindcss": "^4.1.14",
     "tsx": "^4.21.0",
