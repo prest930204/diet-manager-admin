@@ -1,7 +1,3 @@
-요청하신 대로 scripts 부분에 해당 내용을 반영하고, 서버 운영에 필수적인 패키지들(express, pg, dotenv)을 dependencies로 옮겨서 바로 배포 가능한 상태로 수정했습니다.
-
-✅ 수정된 package.json
-JSON
 {
   "name": "react-example",
   "private": true,
