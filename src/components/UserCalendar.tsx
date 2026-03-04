@@ -183,16 +183,16 @@ export function UserCalendar({ user }: { user: any }) {
             key={day.toString()}
             onClick={() => onDateClick(cloneDay)}
             className={cn(
-              "min-h-[100px] p-2 border border-slate-100/50 transition-all cursor-pointer relative group",
+              "min-h-[60px] md:min-h-[100px] p-1 md:p-2 border border-slate-100/50 transition-all cursor-pointer relative group flex flex-col items-center md:items-start",
               !isCurrentMonth ? "bg-slate-50/50 text-slate-300" : "bg-white hover:bg-slate-50",
               isSelected && "ring-2 ring-indigo-500 ring-inset bg-indigo-50/30",
-              i === 0 && "rounded-l-2xl",
-              i === 6 && "rounded-r-2xl"
+              i === 0 && "rounded-l-xl md:rounded-l-2xl",
+              i === 6 && "rounded-r-xl md:rounded-r-2xl"
             )}
           >
             <span
               className={cn(
-                "inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-semibold mb-1 transition-colors",
+                "inline-flex items-center justify-center w-6 h-6 md:w-8 md:h-8 rounded-full text-xs md:text-sm font-semibold mb-1 transition-colors",
                 isSelected ? "bg-indigo-600 text-white shadow-md shadow-indigo-200" : "text-slate-700 group-hover:bg-slate-200"
               )}
             >
@@ -200,10 +200,10 @@ export function UserCalendar({ user }: { user: any }) {
             </span>
             
             {mockCal && isCurrentMonth && (
-              <div className="absolute bottom-2 left-2 right-2">
-                <div className="flex items-center gap-1 text-xs font-medium text-orange-500 bg-orange-50 px-2 py-1 rounded-lg">
-                  <Flame size={12} />
-                  {mockCal}
+              <div className="absolute bottom-1 left-1 right-1 md:bottom-2 md:left-2 md:right-2 flex justify-center md:justify-start">
+                <div className="flex items-center justify-center gap-0.5 md:gap-1 text-[9px] md:text-xs font-medium text-orange-500 bg-orange-50 px-1 md:px-2 py-0.5 md:py-1 rounded-md md:rounded-lg w-full md:w-auto truncate">
+                  <Flame size={10} className="shrink-0 hidden md:block" />
+                  <span className="truncate">{mockCal}</span>
                 </div>
               </div>
             )}
@@ -225,7 +225,7 @@ export function UserCalendar({ user }: { user: any }) {
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
       <div className="lg:col-span-2">
         <Card className="border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-white">
-          <CardContent className="p-8">
+          <CardContent className="p-3 md:p-8">
             {renderHeader()}
             {renderDays()}
             {renderCells()}
