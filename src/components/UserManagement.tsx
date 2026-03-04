@@ -1,203 +1,206 @@
-import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from './ui/Card';
-import { Input } from './ui/Input';
-import { Button } from './ui/Button';
-import { Plus, Trash2, Edit2, Search } from 'lucide-react';
+import express from 'express';
+import { createServer as createViteServer } from 'vite';
+import pkg from 'pg';
+const { Pool } = pkg;
 
-export function UserManagement() {
-  const [users, setUsers] = useState<any[]>([]);
+async function startServer() {
+  const app = express();
+  const PORT = process.env.PORT || 3000;
 
-  useEffect(() => {
-    fetch('/api/members')
-      .then(res => res.json())
-      .then(data => {
-        if (Array.isArray(data)) setUsers(data);
-      })
-      .catch(console.error);
-  }, []);
+  app.use(express.json());
 
-  const [isAddingUser, setIsAddingUser] = useState(false);
-  const [newUser, setNewUser] = useState({ username: '', password: '', phone: '', targetCal: '', targetWeight: '' });
+  let pool: pkg.Pool | null = null;
+  if (process.env.DATABASE_URL) {
+    pool = new Pool({
+      connectionString: process.env.DATABASE_URL,
+      ssl: process.env.DATABASE_URL.includes('railway') ? { rejectUnauthorized: false } : undefined
+    });
 
-  const handleAddUser = async (e: React.FormEvent) => {
-    e.preventDefault();
+    // Initialize tables
     try {
-      const res = await fetch('/api/members', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...newUser, targetCal: Number(newUser.targetCal), targetWeight: Number(newUser.targetWeight) })
-      });
-      const data = await res.json();
+      await pool.query(`
+        CREATE TABLE IF NOT EXISTS admins (
+          id SERIAL PRIMARY KEY,
+          username VARCHAR(255) UNIQUE NOT NULL,
+          password VARCHAR(255) NOT NULL,
+          email VARCHAR(255),
+          phone VARCHAR(255)
+        );
+      `);
       
-      if (res.status === 503) {
-        alert(data.error);
-        return;
+      // 기존 DB 테이블에 feedback 컬럼이 없다면 추가 (마이그레이션)
+      try {
+        await pool.query('ALTER TABLE health_log ADD COLUMN feedback TEXT;');
+        console.log('Added feedback column to health_log table.');
+      } catch (e) {
+        // 이미 컬럼이 존재하면 에러가 발생하므로 무시합니다.
       }
-
-      if (res.ok) {
-        setUsers([...users, { ...newUser, target_cal: Number(newUser.targetCal), target_weight: Number(newUser.targetWeight) }]);
-        setIsAddingUser(false);
-        setNewUser({ username: '', password: '', phone: '', targetCal: '', targetWeight: '' });
-      } else {
-        alert(data.error || '추가 실패');
-      }
+      
+      console.log('Database tables verified/created.');
     } catch (err) {
-      alert('서버 연결 실패');
+      console.error('Error initializing DB:', err);
     }
+  }
+
+  const checkDB = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+    if (!pool) {
+      return res.status(503).json({ error: 'DATABASE_URL is not configured. Please set it in AI Studio Secrets.' });
+    }
+    next();
   };
 
-  const handleDeleteUser = async (id: string) => {
-    if (!confirm('정말 삭제하시겠습니까?')) return;
+  app.post('/api/auth/login', checkDB, async (req, res) => {
     try {
-      const res = await fetch(`/api/members/${id}`, { method: 'DELETE' });
-      if (res.ok) {
-        setUsers(users.filter(u => u.id !== id));
+      const { username, password } = req.body;
+      const result = await pool!.query('SELECT * FROM admins WHERE username = $1 AND password = $2', [username, password]);
+      if (result.rows.length > 0) {
+        res.json({ success: true, user: result.rows[0] });
+      } else {
+        res.status(401).json({ error: 'Invalid credentials' });
       }
-    } catch (err) {
-      alert('삭제 실패');
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
     }
-  };
+  });
 
-  return (
-    <div className="space-y-8 animate-in fade-in duration-500">
-      <div className="flex justify-between items-end">
-        <div>
-          <h2 className="text-3xl font-bold text-slate-900 tracking-tight">회원 관리</h2>
-          <p className="text-slate-500 mt-2">회원 계정을 추가하거나 삭제하고 데이터를 관리합니다.</p>
-        </div>
-        <Button onClick={() => setIsAddingUser(!isAddingUser)} size="lg" className="shadow-md shadow-indigo-200">
-          <Plus size={20} className="mr-2" />
-          {isAddingUser ? '취소' : '새 회원 추가'}
-        </Button>
-      </div>
+  app.post('/api/auth/register', checkDB, async (req, res) => {
+    try {
+      const { username, password, email, phone } = req.body;
+      await pool!.query(
+        'INSERT INTO admins (username, password, email, phone) VALUES ($1, $2, $3, $4)',
+        [username, password, email, phone]
+      );
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
 
-      {isAddingUser && (
-        <Card className="border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-white/50 backdrop-blur-xl animate-in slide-in-from-top-4 duration-300">
-          <CardHeader>
-            <CardTitle className="text-xl font-bold text-slate-900">새 회원 등록</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleAddUser} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider ml-1">아이디 (Username)</label>
-                <Input
-                  required
-                  placeholder="user_id"
-                  value={newUser.username}
-                  onChange={e => setNewUser({ ...newUser, username: e.target.value })}
-                  className="bg-white"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider ml-1">비밀번호</label>
-                <Input
-                  required
-                  type="password"
-                  placeholder="••••••••"
-                  value={newUser.password}
-                  onChange={e => setNewUser({ ...newUser, password: e.target.value })}
-                  className="bg-white"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider ml-1">전화번호</label>
-                <Input
-                  required
-                  placeholder="010-0000-0000"
-                  value={newUser.phone}
-                  onChange={e => setNewUser({ ...newUser, phone: e.target.value })}
-                  className="bg-white"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider ml-1">목표 칼로리 (kcal)</label>
-                <Input
-                  required
-                  type="number"
-                  placeholder="2000"
-                  value={newUser.targetCal}
-                  onChange={e => setNewUser({ ...newUser, targetCal: e.target.value })}
-                  className="bg-white"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider ml-1">목표 체중 (kg)</label>
-                <Input
-                  required
-                  type="number"
-                  placeholder="70"
-                  value={newUser.targetWeight}
-                  onChange={e => setNewUser({ ...newUser, targetWeight: e.target.value })}
-                  className="bg-white"
-                />
-              </div>
-              <div className="md:col-span-2 flex justify-end mt-4">
-                <Button type="submit" size="lg" className="w-full md:w-auto shadow-md shadow-indigo-200">
-                  등록 완료
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
+  app.get('/api/members', checkDB, async (req, res) => {
+    try {
+      const result = await pool!.query('SELECT id, username, phone, target_calories as target_cal, target_weight FROM "user" ORDER BY username ASC');
+      res.json(result.rows);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
 
-      <Card className="border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-white overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="text-xs text-slate-500 uppercase bg-slate-50/50 border-b border-slate-100">
-              <tr>
-                <th className="px-6 py-4 font-semibold tracking-wider">회원 정보</th>
-                <th className="px-6 py-4 font-semibold tracking-wider">연락처</th>
-                <th className="px-6 py-4 font-semibold tracking-wider">목표 칼로리</th>
-                <th className="px-6 py-4 font-semibold tracking-wider">목표 체중</th>
-                <th className="px-6 py-4 font-semibold tracking-wider text-right">관리</th>
-              </tr>
-            </thead>
-            <tbody>
-              {users.map((user) => (
-                <tr key={user.id} className="bg-white border-b border-slate-50 hover:bg-slate-50/50 transition-colors">
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
-                        {user.username ? user.username[0].toUpperCase() : '?'}
-                      </div>
-                      <div>
-                        <div className="font-bold text-slate-900">{user.username}</div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 text-slate-600 font-medium">{user.phone}</td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                      {user.target_cal || user.targetCal} kcal
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-                      {user.target_weight || 0} kg
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-2">
-                      <Button variant="ghost" size="icon" className="text-slate-400 hover:text-indigo-600 hover:bg-indigo-50">
-                        <Edit2 size={16} />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        onClick={() => handleDeleteUser(user.id)}
-                        className="text-slate-400 hover:text-red-600 hover:bg-red-50"
-                      >
-                        <Trash2 size={16} />
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-    </div>
-  );
+  app.post('/api/members', checkDB, async (req, res) => {
+    try {
+      const { username, password, phone, targetCal, targetWeight } = req.body;
+      await pool!.query(
+        'INSERT INTO "user" (username, password, phone, target_calories, target_weight, role) VALUES ($1, $2, $3, $4, $5, $6)',
+        [username, password, phone, targetCal, targetWeight || 0, 'user']
+      );
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.delete('/api/members/:id', checkDB, async (req, res) => {
+    try {
+      await pool!.query('DELETE FROM "user" WHERE id = $1', [req.params.id]);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.put('/api/members/:id', checkDB, async (req, res) => {
+    try {
+      const { username, phone, targetCal, targetWeight } = req.body;
+      await pool!.query(
+        'UPDATE "user" SET username = $1, phone = $2, target_calories = $3, target_weight = $4 WHERE id = $5',
+        [username, phone, targetCal, targetWeight || 0, req.params.id]
+      );
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/members/search', checkDB, async (req, res) => {
+    try {
+      const { username, phone } = req.query;
+      let query = 'SELECT id, username, phone, target_calories as target_cal, target_weight FROM "user" WHERE 1=1';
+      const params: any[] = [];
+      let paramCount = 1;
+
+      if (username) {
+        query += ` AND username = $${paramCount++}`;
+        params.push(username);
+      }
+      if (phone) {
+        query += ` AND phone = $${paramCount++}`;
+        params.push(phone);
+      }
+
+      if (params.length === 0) {
+        return res.status(400).json({ error: 'Search parameters required' });
+      }
+
+      const result = await pool!.query(query, params);
+      if (result.rows.length > 0) {
+        res.json(result.rows[0]);
+      } else {
+        res.status(404).json({ error: 'Member not found' });
+      }
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.get('/api/diet-records', checkDB, async (req, res) => {
+    try {
+      const { memberId, month } = req.query; // month format: YYYY-MM
+      const result = await pool!.query(`
+        SELECT id, user_id as member_id, date as record_date, 
+               total_calories as calories, total_carbs as carbs, 
+               total_protein as protein, total_fat as fat, 
+               food_list, current_weight, feedback
+        FROM health_log
+        WHERE user_id = $1 AND to_char(date, 'YYYY-MM') = $2
+      `, [memberId, month]);
+      
+      const records = result.rows.map(row => ({
+        ...row,
+        meals: row.food_list ? [{ id: row.id, name: '식단 기록', desc: row.food_list, cal: row.calories }] : []
+      }));
+      res.json(records);
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  app.post('/api/diet-records/feedback', checkDB, async (req, res) => {
+    try {
+      const { memberId, date, feedback } = req.body;
+      await pool!.query(`
+        UPDATE health_log 
+        SET feedback = $3 
+        WHERE user_id = $1 AND to_char(date, 'YYYY-MM-DD') = $2
+      `, [memberId, date, feedback]);
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
+  // Vite middleware
+  if (process.env.NODE_ENV !== 'production') {
+    const vite = await createViteServer({
+      server: { middlewareMode: true },
+      appType: 'spa',
+    });
+    app.use(vite.middlewares);
+  } else {
+    app.use(express.static('dist'));
+  }
+
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
 }
+
+startServer();

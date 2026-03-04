@@ -107,6 +107,19 @@ async function startServer() {
     }
   });
 
+  app.put('/api/members/:id', checkDB, async (req, res) => {
+    try {
+      const { username, phone, targetCal, targetWeight } = req.body;
+      await pool!.query(
+        'UPDATE "user" SET username = $1, phone = $2, target_calories = $3, target_weight = $4 WHERE id = $5',
+        [username, phone, targetCal, targetWeight || 0, req.params.id]
+      );
+      res.json({ success: true });
+    } catch (err: any) {
+      res.status(500).json({ error: err.message });
+    }
+  });
+
   app.get('/api/members/search', checkDB, async (req, res) => {
     try {
       const { username, phone } = req.query;
