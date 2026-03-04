@@ -1,9 +1,3 @@
-데이터베이스 연결 문제를 해결하고, 배포 환경(Railway)에서 안정적으로 작동하도록 최적화한 전체 코드입니다.
-
-주요 수정 사항은 dotenv 설정 추가, 상세 로깅, 그리고 SPA 라우팅 지원입니다. 이 코드를 server.ts에 그대로 덮어쓰세요.
-
-✅ 수정된 server.ts
-TypeScript
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import pg from 'pg';
