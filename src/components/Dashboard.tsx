@@ -12,10 +12,18 @@ export function Dashboard() {
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchUsername && searchPhone) {
-      try {
-        const res = await fetch(`/api/members/search?username=${searchUsername}&phone=${searchPhone}`);
-        const data = await res.json();
+    if (!searchUsername && !searchPhone) {
+      alert('아이디 또는 전화번호를 입력해주세요.');
+      return;
+    }
+
+    try {
+      const params = new URLSearchParams();
+      if (searchUsername) params.append('username', searchUsername);
+      if (searchPhone) params.append('phone', searchPhone);
+
+      const res = await fetch(`/api/members/search?${params.toString()}`);
+      const data = await res.json();
         
         if (res.status === 503) {
           alert(data.error);
@@ -38,7 +46,6 @@ export function Dashboard() {
       } catch (err) {
         alert('서버 연결에 실패했습니다.');
       }
-    }
   };
 
   return (

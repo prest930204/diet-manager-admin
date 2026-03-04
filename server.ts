@@ -78,7 +78,7 @@ async function startServer() {
 
   app.get('/api/members', checkDB, async (req, res) => {
     try {
-      const result = await pool!.query('SELECT id, username, phone, target_calories as target_cal, target_weight FROM "user" WHERE role = $1 ORDER BY username ASC', ['user']);
+      const result = await pool!.query('SELECT id, username, phone, target_calories as target_cal, target_weight FROM "user" ORDER BY username ASC');
       res.json(result.rows);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -110,7 +110,24 @@ async function startServer() {
   app.get('/api/members/search', checkDB, async (req, res) => {
     try {
       const { username, phone } = req.query;
-      const result = await pool!.query('SELECT id, username, phone, target_calories as target_cal, target_weight FROM "user" WHERE username = $1 AND phone = $2', [username, phone]);
+      let query = 'SELECT id, username, phone, target_calories as target_cal, target_weight FROM "user" WHERE 1=1';
+      const params: any[] = [];
+      let paramCount = 1;
+
+      if (username) {
+        query += ` AND username = $${paramCount++}`;
+        params.push(username);
+      }
+      if (phone) {
+        query += ` AND phone = $${paramCount++}`;
+        params.push(phone);
+      }
+
+      if (params.length === 0) {
+        return res.status(400).json({ error: 'Search parameters required' });
+      }
+
+      const result = await pool!.query(query, params);
       if (result.rows.length > 0) {
         res.json(result.rows[0]);
       } else {
