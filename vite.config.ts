@@ -1,30 +1,21 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
+import path from 'path'; // 이 줄을 추가하세요
 
-// https://vitejs.dev/config/
 export default defineConfig({
-  plugins: [
-    react(),
-    tailwindcss(),
-  ],
-  build: {
-    outDir: 'dist',
-    // 중요: 서버용 라이브러리들이 빌드 과정에 간섭하지 않도록 외부 모듈로 처리
-    rollupOptions: {
-      external: [
-        'express',
-        'better-sqlite3',
-        'pg',
-        'dotenv',
-        'fdir',
-        'jiti',
-        'tsx'
-      ],
+  plugins: [react(), tailwindcss()],
+  resolve: {
+    alias: {
+      // "@"를 "src" 폴더로 연결해줍니다.
+      "@": path.resolve(__dirname, "./src"),
     },
   },
-  // 서버 로직이 들어있는 폴더가 있다면 빌드 대상에서 제외하도록 설정
-  optimizeDeps: {
-    exclude: ['express', 'better-sqlite3', 'pg']
+  build: {
+    outDir: 'dist',
+    // 이전 단계에서 추가했던 서버 패키지들은 그대로 두는 것이 안전합니다.
+    rollupOptions: {
+      external: ['express', 'better-sqlite3', 'pg', 'dotenv']
+    }
   }
 });
