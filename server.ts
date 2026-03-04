@@ -1,7 +1,7 @@
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
-import pkg from 'pg';
-const { Pool } = pkg;
+import pg from 'pg';
+const { Pool } = pg;
 
 async function startServer() {
   const app = express();
@@ -9,7 +9,7 @@ async function startServer() {
 
   app.use(express.json());
 
-  let pool: pkg.Pool | null = null;
+  let pool: pg.Pool | null = null;
   if (process.env.DATABASE_URL) {
     pool = new Pool({
       connectionString: process.env.DATABASE_URL,
