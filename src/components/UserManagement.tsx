@@ -17,7 +17,7 @@ export function UserManagement() {
   }, []);
 
   const [isAddingUser, setIsAddingUser] = useState(false);
-  const [newUser, setNewUser] = useState({ id: '', password: '', name: '', phone: '', targetCal: '', targetWeight: '' });
+  const [newUser, setNewUser] = useState({ username: '', password: '', phone: '', targetCal: '', targetWeight: '' });
 
   const handleAddUser = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -37,7 +37,7 @@ export function UserManagement() {
       if (res.ok) {
         setUsers([...users, { ...newUser, target_cal: Number(newUser.targetCal), target_weight: Number(newUser.targetWeight) }]);
         setIsAddingUser(false);
-        setNewUser({ id: '', password: '', name: '', phone: '', targetCal: '', targetWeight: '' });
+        setNewUser({ username: '', password: '', phone: '', targetCal: '', targetWeight: '' });
       } else {
         alert(data.error || '추가 실패');
       }
@@ -79,12 +79,12 @@ export function UserManagement() {
           <CardContent>
             <form onSubmit={handleAddUser} className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider ml-1">아이디</label>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider ml-1">아이디 (Username)</label>
                 <Input
                   required
                   placeholder="user_id"
-                  value={newUser.id}
-                  onChange={e => setNewUser({ ...newUser, id: e.target.value })}
+                  value={newUser.username}
+                  onChange={e => setNewUser({ ...newUser, username: e.target.value })}
                   className="bg-white"
                 />
               </div>
@@ -96,16 +96,6 @@ export function UserManagement() {
                   placeholder="••••••••"
                   value={newUser.password}
                   onChange={e => setNewUser({ ...newUser, password: e.target.value })}
-                  className="bg-white"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider ml-1">이름</label>
-                <Input
-                  required
-                  placeholder="홍길동"
-                  value={newUser.name}
-                  onChange={e => setNewUser({ ...newUser, name: e.target.value })}
                   className="bg-white"
                 />
               </div>
@@ -169,11 +159,10 @@ export function UserManagement() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold">
-                        {user.name[0]}
+                        {user.username ? user.username[0].toUpperCase() : '?'}
                       </div>
                       <div>
-                        <div className="font-bold text-slate-900">{user.name}</div>
-                        <div className="text-slate-500 text-xs">{user.id}</div>
+                        <div className="font-bold text-slate-900">{user.username}</div>
                       </div>
                     </div>
                   </td>

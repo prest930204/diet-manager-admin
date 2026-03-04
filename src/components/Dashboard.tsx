@@ -6,15 +6,15 @@ import { Search, UserCircle } from 'lucide-react';
 import { UserCalendar } from './UserCalendar';
 
 export function Dashboard() {
-  const [searchId, setSearchId] = useState('');
+  const [searchUsername, setSearchUsername] = useState('');
   const [searchPhone, setSearchPhone] = useState('');
   const [selectedUser, setSelectedUser] = useState<any>(null);
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (searchId && searchPhone) {
+    if (searchUsername && searchPhone) {
       try {
-        const res = await fetch(`/api/members/search?id=${searchId}&phone=${searchPhone}`);
+        const res = await fetch(`/api/members/search?username=${searchUsername}&phone=${searchPhone}`);
         const data = await res.json();
         
         if (res.status === 503) {
@@ -25,11 +25,11 @@ export function Dashboard() {
         if (res.ok) {
           setSelectedUser({
             id: data.id,
-            name: data.name,
+            username: data.username,
             phone: data.phone,
             targetCalories: data.target_cal,
             targetWeight: data.target_weight,
-            currentWeight: data.current_weight,
+            currentWeight: data.current_weight || 0,
           });
         } else {
           alert('회원을 찾을 수 없습니다.');
@@ -54,11 +54,11 @@ export function Dashboard() {
         <CardContent className="p-6">
           <form onSubmit={handleSearch} className="flex gap-4 items-end">
             <div className="flex-1 space-y-2">
-              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider ml-1">회원 아이디</label>
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider ml-1">회원 아이디 (Username)</label>
               <Input
                 placeholder="user123"
-                value={searchId}
-                onChange={(e) => setSearchId(e.target.value)}
+                value={searchUsername}
+                onChange={(e) => setSearchUsername(e.target.value)}
                 className="bg-white"
               />
             </div>
@@ -86,7 +86,7 @@ export function Dashboard() {
               <UserCircle size={32} />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-slate-900">{selectedUser.name}님</h3>
+              <h3 className="text-xl font-bold text-slate-900">{selectedUser.username}님</h3>
               <p className="text-slate-500">{selectedUser.phone} • ID: {selectedUser.id}</p>
             </div>
             <div className="ml-auto flex gap-6 text-right">

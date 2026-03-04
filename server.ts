@@ -26,39 +26,12 @@ async function startServer() {
           email VARCHAR(255),
           phone VARCHAR(255)
         );
-        CREATE TABLE IF NOT EXISTS "user" (
-          id VARCHAR(255) PRIMARY KEY,
-          password VARCHAR(255) NOT NULL,
-          name VARCHAR(255) NOT NULL,
-          phone VARCHAR(255),
-          target_cal INTEGER,
-          current_weight INTEGER DEFAULT 0,
-          target_weight INTEGER DEFAULT 0
-        );
-        CREATE TABLE IF NOT EXISTS health_log (
-          id SERIAL PRIMARY KEY,
-          user_id VARCHAR(255) REFERENCES "user"(id) ON DELETE CASCADE,
-          record_date DATE NOT NULL,
-          calories INTEGER DEFAULT 0,
-          carbs INTEGER DEFAULT 0,
-          protein INTEGER DEFAULT 0,
-          fat INTEGER DEFAULT 0,
-          feedback TEXT,
-          UNIQUE(user_id, record_date)
-        );
-        CREATE TABLE IF NOT EXISTS meals (
-          id SERIAL PRIMARY KEY,
-          record_id INTEGER REFERENCES health_log(id) ON DELETE CASCADE,
-          meal_type VARCHAR(50),
-          description TEXT,
-          calories INTEGER DEFAULT 0
-        );
       `);
       
-      // 기존 DB 테이블에 target_weight 컬럼이 없다면 추가 (마이그레이션)
+      // 기존 DB 테이블에 feedback 컬럼이 없다면 추가 (마이그레이션)
       try {
-        await pool.query('ALTER TABLE "user" ADD COLUMN target_weight INTEGER DEFAULT 0;');
-        console.log('Added target_weight column to user table.');
+        await pool.query('ALTER TABLE health_log ADD COLUMN feedback TEXT;');
+        console.log('Added feedback column to health_log table.');
       } catch (e) {
         // 이미 컬럼이 존재하면 에러가 발생하므로 무시합니다.
       }
@@ -105,7 +78,7 @@ async function startServer() {
 
   app.get('/api/members', checkDB, async (req, res) => {
     try {
-      const result = await pool!.query('SELECT * FROM "user" ORDER BY name ASC');
+      const result = await pool!.query('SELECT id, username, phone, target_calories as target_cal, target_weight FROM "user" WHERE role = $1 ORDER BY username ASC', ['user']);
       res.json(result.rows);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
@@ -114,10 +87,10 @@ async function startServer() {
 
   app.post('/api/members', checkDB, async (req, res) => {
     try {
-      const { id, password, name, phone, targetCal, targetWeight } = req.body;
+      const { username, password, phone, targetCal, targetWeight } = req.body;
       await pool!.query(
-        'INSERT INTO "user" (id, password, name, phone, target_cal, target_weight) VALUES ($1, $2, $3, $4, $5, $6)',
-        [id, password, name, phone, targetCal, targetWeight || 0]
+        'INSERT INTO "user" (username, password, phone, target_calories, target_weight, role) VALUES ($1, $2, $3, $4, $5, $6)',
+        [username, password, phone, targetCal, targetWeight || 0, 'user']
       );
       res.json({ success: true });
     } catch (err: any) {
@@ -136,8 +109,8 @@ async function startServer() {
 
   app.get('/api/members/search', checkDB, async (req, res) => {
     try {
-      const { id, phone } = req.query;
-      const result = await pool!.query('SELECT * FROM "user" WHERE id = $1 AND phone = $2', [id, phone]);
+      const { username, phone } = req.query;
+      const result = await pool!.query('SELECT id, username, phone, target_calories as target_cal, target_weight FROM "user" WHERE username = $1 AND phone = $2', [username, phone]);
       if (result.rows.length > 0) {
         res.json(result.rows[0]);
       } else {
@@ -152,14 +125,19 @@ async function startServer() {
     try {
       const { memberId, month } = req.query; // month format: YYYY-MM
       const result = await pool!.query(`
-        SELECT d.*, 
-               COALESCE(json_agg(json_build_object('id', m.id, 'name', m.meal_type, 'desc', m.description, 'cal', m.calories)) FILTER (WHERE m.id IS NOT NULL), '[]') as meals
-        FROM health_log d
-        LEFT JOIN meals m ON d.id = m.record_id
-        WHERE d.user_id = $1 AND to_char(d.record_date, 'YYYY-MM') = $2
-        GROUP BY d.id
+        SELECT id, user_id as member_id, date as record_date, 
+               total_calories as calories, total_carbs as carbs, 
+               total_protein as protein, total_fat as fat, 
+               food_list, current_weight, feedback
+        FROM health_log
+        WHERE user_id = $1 AND to_char(date, 'YYYY-MM') = $2
       `, [memberId, month]);
-      res.json(result.rows);
+      
+      const records = result.rows.map(row => ({
+        ...row,
+        meals: row.food_list ? [{ id: row.id, name: '식단 기록', desc: row.food_list, cal: row.calories }] : []
+      }));
+      res.json(records);
     } catch (err: any) {
       res.status(500).json({ error: err.message });
     }
@@ -168,12 +146,10 @@ async function startServer() {
   app.post('/api/diet-records/feedback', checkDB, async (req, res) => {
     try {
       const { memberId, date, feedback } = req.body;
-      // Upsert feedback
       await pool!.query(`
-        INSERT INTO health_log (user_id, record_date, feedback)
-        VALUES ($1, $2, $3)
-        ON CONFLICT (user_id, record_date) 
-        DO UPDATE SET feedback = EXCLUDED.feedback
+        UPDATE health_log 
+        SET feedback = $3 
+        WHERE user_id = $1 AND to_char(date, 'YYYY-MM-DD') = $2
       `, [memberId, date, feedback]);
       res.json({ success: true });
     } catch (err: any) {
