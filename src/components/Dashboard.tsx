@@ -58,8 +58,8 @@ export function Dashboard() {
       </div>
 
       <Card className="border-0 shadow-[0_8px_30px_rgb(0,0,0,0.04)] bg-white/50 backdrop-blur-xl">
-        <CardContent className="p-6">
-          <form onSubmit={handleSearch} className="flex gap-4 items-end">
+        <CardContent className="p-4 md:p-6">
+          <form onSubmit={handleSearch} className="flex flex-col md:flex-row gap-4 md:items-end">
             <div className="flex-1 space-y-2">
               <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider ml-1">회원 아이디 (Username)</label>
               <Input
@@ -78,7 +78,7 @@ export function Dashboard() {
                 className="bg-white"
               />
             </div>
-            <Button type="submit" size="lg" className="w-32 shadow-md shadow-indigo-200">
+            <Button type="submit" size="lg" className="w-full md:w-32 shadow-md shadow-indigo-200 mt-2 md:mt-0">
               <Search className="mr-2 h-4 w-4" />
               검색
             </Button>
@@ -88,26 +88,28 @@ export function Dashboard() {
 
       {selectedUser ? (
         <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-          <div className="flex items-center gap-4 p-6 bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
-            <div className="w-16 h-16 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
-              <UserCircle size={32} />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-slate-900">{selectedUser.username}님</h3>
-              <p className="text-slate-500">{selectedUser.phone} • ID: {selectedUser.id}</p>
-            </div>
-            <div className="ml-auto flex gap-6 text-right">
-              <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">목표 칼로리</p>
-                <p className="text-lg font-bold text-slate-900">{selectedUser.targetCalories} kcal</p>
+          <div className="flex flex-col md:flex-row md:items-center gap-4 p-4 md:p-6 bg-white rounded-3xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100">
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 md:w-16 md:h-16 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
+                <UserCircle size={24} className="md:w-8 md:h-8" />
               </div>
               <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">목표 체중</p>
-                <p className="text-lg font-bold text-slate-900">{selectedUser.targetWeight || 0} kg</p>
+                <h3 className="text-lg md:text-xl font-bold text-slate-900">{selectedUser.username}님</h3>
+                <p className="text-sm md:text-base text-slate-500">{selectedUser.phone} • ID: {selectedUser.id}</p>
+              </div>
+            </div>
+            <div className="md:ml-auto grid grid-cols-3 gap-2 md:gap-6 text-center md:text-right mt-4 md:mt-0 border-t md:border-t-0 pt-4 md:pt-0 border-slate-100">
+              <div>
+                <p className="text-[10px] md:text-xs font-semibold text-slate-400 uppercase tracking-wider">목표 칼로리</p>
+                <p className="text-sm md:text-lg font-bold text-slate-900">{selectedUser.targetCalories} kcal</p>
               </div>
               <div>
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">현재 체중</p>
-                <p className="text-lg font-bold text-slate-900">{selectedUser.currentWeight} kg</p>
+                <p className="text-[10px] md:text-xs font-semibold text-slate-400 uppercase tracking-wider">목표 체중</p>
+                <p className="text-sm md:text-lg font-bold text-slate-900">{selectedUser.targetWeight || 0} kg</p>
+              </div>
+              <div>
+                <p className="text-[10px] md:text-xs font-semibold text-slate-400 uppercase tracking-wider">현재 체중</p>
+                <p className="text-sm md:text-lg font-bold text-slate-900">{selectedUser.currentWeight} kg</p>
               </div>
             </div>
           </div>
