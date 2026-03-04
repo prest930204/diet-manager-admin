@@ -1,7 +1,22 @@
+데이터베이스 연결 문제를 해결하고, 배포 환경(Railway)에서 안정적으로 작동하도록 최적화한 전체 코드입니다.
+
+주요 수정 사항은 dotenv 설정 추가, 상세 로깅, 그리고 SPA 라우팅 지원입니다. 이 코드를 server.ts에 그대로 덮어쓰세요.
+
+✅ 수정된 server.ts
+TypeScript
 import express from 'express';
 import { createServer as createViteServer } from 'vite';
 import pg from 'pg';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+
+// 1. 환경 변수 로드 (가장 먼저 실행되어야 함)
+dotenv.config();
+
 const { Pool } = pg;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 async function startServer() {
   const app = express();
@@ -9,15 +24,24 @@ async function startServer() {
 
   app.use(express.json());
 
+  // 디버깅을 위한 서버 상태 출력
+  console.log('--- Server Status ---');
+  console.log('NODE_ENV:', process.env.NODE_ENV);
+  console.log('DATABASE_URL Configured:', !!process.env.DATABASE_URL);
+  console.log('---------------------');
+
   let pool: pg.Pool | null = null;
   if (process.env.DATABASE_URL) {
     pool = new Pool({
       connectionString: process.env.DATABASE_URL,
-      ssl: process.env.DATABASE_URL.includes('railway') ? { rejectUnauthorized: false } : undefined
+      // Railway 연결을 위한 SSL 설정
+      ssl: process.env.DATABASE_URL.includes('railway') || process.env.NODE_ENV === 'production' 
+           ? { rejectUnauthorized: false } 
+           : undefined
     });
 
-    // Initialize tables
     try {
+      // 테이블 초기화
       await pool.query(`
         CREATE TABLE IF NOT EXISTS admins (
           id SERIAL PRIMARY KEY,
@@ -28,27 +52,27 @@ async function startServer() {
         );
       `);
       
-      // 기존 DB 테이블에 feedback 컬럼이 없다면 추가 (마이그레이션)
       try {
         await pool.query('ALTER TABLE health_log ADD COLUMN feedback TEXT;');
-        console.log('Added feedback column to health_log table.');
+        console.log('Success: feedback column verified.');
       } catch (e) {
-        // 이미 컬럼이 존재하면 에러가 발생하므로 무시합니다.
+        // 컬럼 존재 시 무시
       }
       
-      console.log('Database tables verified/created.');
+      console.log('Database connected and tables verified.');
     } catch (err) {
-      console.error('Error initializing DB:', err);
+      console.error('Database Connection Error:', err);
     }
   }
 
   const checkDB = (req: express.Request, res: express.Response, next: express.NextFunction) => {
     if (!pool) {
-      return res.status(503).json({ error: 'DATABASE_URL is not configured. Please set it in AI Studio Secrets.' });
+      return res.status(503).json({ error: 'DATABASE_URL is not configured properly in Railway Variables.' });
     }
     next();
   };
 
+  // --- API Routes ---
   app.post('/api/auth/login', checkDB, async (req, res) => {
     try {
       const { username, password } = req.body;
@@ -153,7 +177,7 @@ async function startServer() {
 
   app.get('/api/diet-records', checkDB, async (req, res) => {
     try {
-      const { memberId, month } = req.query; // month format: YYYY-MM
+      const { memberId, month } = req.query;
       const result = await pool!.query(`
         SELECT id, user_id as member_id, date as record_date, 
                total_calories as calories, total_carbs as carbs, 
@@ -187,7 +211,7 @@ async function startServer() {
     }
   });
 
-  // Vite middleware
+  // --- Static Files & Vite Setup ---
   if (process.env.NODE_ENV !== 'production') {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -195,11 +219,17 @@ async function startServer() {
     });
     app.use(vite.middlewares);
   } else {
-    app.use(express.static('dist'));
+    const distPath = path.resolve(__dirname, 'dist');
+    app.use(express.static(distPath));
+
+    // SPA 라우팅 지원: API 이외의 모든 경로는 index.html로
+    app.get('*', (req, res) => {
+      res.sendFile(path.join(distPath, 'index.html'));
+    });
   }
 
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log(`Server running on http://0.0.0.0:${PORT}`);
   });
 }
 
